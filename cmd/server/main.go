@@ -42,7 +42,7 @@ func main() {
 
 	// Launch server and listen to application port.
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		l.With(zap.Error(err)).Panic("error while running gin http server, error: %v")
+		l.With(zap.Error(err)).Panic("error while running gin http server")
 	}
 
 	os.Exit(0)

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- Latest compiled JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="container col-md-5 col-md-offset-3">
+    <form id="form" action="" method="post">
+        <div class="form-group">
+            <label for="url">Please Enter URL</label>
+            <input type="text" class="form-control" name="url" id="url" placeholder="www.w3schools.com">
+        </div>
+        <button id="submit" value="submit" type="button" name="submit" class="btn btn-info">Submit</button>
+    </form>
+    <br>
+    <div style="display: none;" id="error_box" class="alert alert-danger">
+        <strong>Error!</strong> <b id="error"> Could not retrieve result.</b>
+    </div>
+
+    <div style="display: none;" id="success_box">
+        <div class="alert alert-success">
+            <strong>Success!</strong>
+            <br>
+            Result for <strong id="url_result"></strong>:
+        </div>
+        <table class="table">
+            <thead>
+            <tr>
+                <th scope="col">HTML Version</th>
+                <td id="html_version"></td>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <th scope="row">Page Title</th>
+                <td id="page_title"></td>
+            </tr>
+            <tr>
+                <th scope="row">External Links</th>
+                <td id="external_links"></td>
+            </tr>
+            <tr>
+                <th scope="row">Internal Links</th>
+                <td id="internal_links"></td>
+            </tr>
+            <tr>
+                <th scope="row">Inaccessible Links</th>
+                <td id="inaccessible_links"></td>
+            </tr>
+            <tr>
+                <th scope="row">Has Login Form</th>
+                <td id="has_login"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        // click on button submit
+        $("#submit").on('click', function () {
+            let url = document.getElementById('url').value
+            let data = {};
+            data["url"] = url
+            $.ajax({
+                type: "POST",
+                url: "analyze-url",
+                data: JSON.stringify(data),
+                success: function (data) {
+                    $('#url_result').html(url)
+                    $('#html_version').html(data.result.html_version)
+                    $('#page_title').html(data.result.page_title)
+                    $('#external_links').html(data.result.external_links)
+                    $('#internal_links').html(data.result.internal_links)
+                    $('#inaccessible_links').html(data.result.inaccessible_links)
+                    $('#has_login').html(data.result.has_login)
+                    $('#success_box').show();
+                    $('#error_box').hide();
+                },
+                error: function (error) {
+                    console.log(error)
+                    $('#success_box').hide();
+                    $('#error_box').show();
+                },
+                dataType: "json",
+                contentType: "application/json"
+            });
+        });
+    });
+
+</script>
+</body>
+</html>

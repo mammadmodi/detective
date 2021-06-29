@@ -25,7 +25,9 @@ func New(logger *zap.Logger, client *http.Client) *HTTPHandler {
 // GetRouter returns a http.Handler implementation for analyzing urls.
 func (h *HTTPHandler) GetRouter() http.Handler {
 	r := gin.New()
-	r.GET("/analyze-url", h.Form)
+	r.GET("/analyze-url", func(c *gin.Context) {
+		http.ServeFile(c.Writer, c.Request, "./web/static/form.html")
+	})
 	r.POST("/analyze-url", h.AnalyzeURL)
 
 	return r

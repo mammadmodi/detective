@@ -11,8 +11,7 @@ import (
 // AppConfig is a struct which contains configuration of the application.
 type AppConfig struct {
 	LoggerConfig *logger.Config
-	Host         string        `default:"127.0.0.1"`
-	Port         int           `default:"8000"`
+	Addr         string        `default:":8000"`
 	HTTPTimeout  time.Duration `split_words:"true" default:"10s"`
 }
 

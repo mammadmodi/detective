@@ -7,5 +7,5 @@ type Config struct {
 	Pretty              bool   `default:"false" split_words:"true"`
 	FileRedirectEnabled bool   `default:"false" split_words:"true"`
 	FileRedirectPath    string `default:"/var/log" split_words:"true"`
-	FileRedirectPrefix  string `default:"webpage-analyzer" split_words:"true"`
+	FileRedirectPrefix  string `default:"detective" split_words:"true"`
 }

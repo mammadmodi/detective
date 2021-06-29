@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/mammadmodi/webpage-analyzer/internal/config"
-	"github.com/mammadmodi/webpage-analyzer/pkg/logger"
+	"github.com/mammadmodi/detective/internal/config"
+	"github.com/mammadmodi/detective/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -16,7 +16,7 @@ func init() {
 		panic(err)
 	}
 
-	l, err = logger.NewZapLogger("webpage_analyzer", c.LoggerConfig)
+	l, err = logger.NewZapLogger("detective", c.LoggerConfig)
 	if err != nil {
 		panic(err)
 	}

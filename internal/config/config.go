@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/mammadmodi/webpage-analyzer/pkg/logger"
+	"github.com/mammadmodi/detective/pkg/logger"
 )
 
 // AppConfig is a struct which contains configuration of the application.
@@ -20,14 +20,14 @@ type AppConfig struct {
 func NewAppConfig() (*AppConfig, error) {
 	// Try to load env variables to AppConfig struct
 	c := &AppConfig{}
-	err := envconfig.Process("webpage_analyzer", c)
+	err := envconfig.Process("detective", c)
 	if err != nil {
 		return nil, fmt.Errorf("error while processing env variables for root configs, error: %s", err.Error())
 	}
 
 	// Try to load env variables to logger.Config struct
 	loggerConfig := &logger.Config{}
-	if err := envconfig.Process("webpage_analyzer_logger", loggerConfig); err != nil {
+	if err := envconfig.Process("detective_logger", loggerConfig); err != nil {
 		return nil, fmt.Errorf("error while processing env variables for logger configs, error: %s", err.Error())
 	}
 	c.LoggerConfig = loggerConfig

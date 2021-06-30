@@ -13,13 +13,13 @@ type Headings struct {
 }
 
 type Result struct {
-	HTMLVersion       string    `json:"html_version"`
-	PageTitle         string    `json:"page_title"`
-	HeadingsCount     *Headings `json:"headings"`
-	InternalLinks     uint      `json:"internal_links"`
-	ExternalLinks     uint      `json:"external_links"`
-	InaccessibleLinks uint      `json:"inaccessible_links"`
-	HasLoginForm      bool      `json:"has_login_form"`
+	HTMLVersion       string   `json:"html_version"`
+	PageTitle         string   `json:"page_title"`
+	HeadingsCount     Headings `json:"headings"`
+	InternalLinks     uint     `json:"internal_links"`
+	ExternalLinks     uint     `json:"external_links"`
+	InaccessibleLinks uint     `json:"inaccessible_links"`
+	HasLoginForm      bool     `json:"has_login_form"`
 }
 
 // HTMLAnalyzer is a struct by which you can parse an html string
@@ -40,10 +40,11 @@ func (h HTMLAnalyzer) Analyze() (Result, error) {
 	// TODO handle errors.
 	htmlVersion, _ := h.getHTMLVersion()
 	pageTitle, _ := h.getPageTitle()
+	headingsCount, _ := h.getHeadingsCount()
 	return Result{
 		HTMLVersion:       htmlVersion,
 		PageTitle:         pageTitle,
-		HeadingsCount:     nil,
+		HeadingsCount:     headingsCount,
 		InternalLinks:     0,
 		ExternalLinks:     0,
 		InaccessibleLinks: 0,
@@ -109,6 +110,40 @@ func (h *HTMLAnalyzer) getPageTitle() (string, error) {
 				return tokenizer.Token().Data, nil
 			}
 			return "Empty Page Title", nil
+		}
+	}
+}
+
+func (h *HTMLAnalyzer) getHeadingsCount() (Headings, error) {
+	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
+	headings := Headings{}
+	for {
+		tt := tokenizer.Next()
+		if tt == html.ErrorToken {
+			err := tokenizer.Err()
+			if err == io.EOF {
+				return headings, nil
+			}
+			return headings, fmt.Errorf("error while tokenizing HTML: %v", err)
+		}
+
+		td := tokenizer.Token().Data
+		if tt == html.StartTagToken && string(td[0]) == "h" {
+			println(td)
+			switch td {
+			case "h1":
+				headings.H1++
+			case "h2":
+				headings.H2++
+			case "h3":
+				headings.H3++
+			case "h4":
+				headings.H4++
+			case "h5":
+				headings.H5++
+			case "h6":
+				headings.H6++
+			}
 		}
 	}
 }

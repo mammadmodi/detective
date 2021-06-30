@@ -38,10 +38,11 @@ func New(htmlDocument string) *HTMLAnalyzer {
 // Analyze analyzes the html document and returns a Result object.
 func (h HTMLAnalyzer) Analyze() (Result, error) {
 	// TODO handle errors.
-	htmlVersion, _ := h.resolveHTMLVersion()
+	htmlVersion, _ := h.getHTMLVersion()
+	pageTitle, _ := h.getPageTitle()
 	return Result{
 		HTMLVersion:       htmlVersion,
-		PageTitle:         "",
+		PageTitle:         pageTitle,
 		HeadingsCount:     nil,
 		InternalLinks:     0,
 		ExternalLinks:     0,
@@ -50,16 +51,16 @@ func (h HTMLAnalyzer) Analyze() (Result, error) {
 	}, nil
 }
 
-func (h *HTMLAnalyzer) resolveHTMLVersion() (string, error) {
+func (h *HTMLAnalyzer) getHTMLVersion() (string, error) {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
 			err := tokenizer.Err()
 			if err == io.EOF {
-				return "unknown_version", nil
+				return "Unknown HTML Version", nil
 			}
-			return "unknown_version", fmt.Errorf("error while tokenizing HTML: %v", err)
+			return "Unknown HTML Version", fmt.Errorf("error while tokenizing HTML: %v", err)
 		}
 		if tt == html.DoctypeToken {
 			type docType struct {
@@ -85,6 +86,29 @@ func (h *HTMLAnalyzer) resolveHTMLVersion() (string, error) {
 				}
 			}
 			return "unknown", nil
+		}
+	}
+}
+
+func (h *HTMLAnalyzer) getPageTitle() (string, error) {
+	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
+	for {
+		tt := tokenizer.Next()
+		if tt == html.ErrorToken {
+			err := tokenizer.Err()
+			if err == io.EOF {
+				return "Unknown Page Title", nil
+			}
+			return "Unknown Page Title", fmt.Errorf("error while tokenizing HTML: %v", err)
+		}
+
+		td := tokenizer.Token().Data
+		if tt == html.StartTagToken && td == "title" {
+			tt = tokenizer.Next()
+			if tt == html.TextToken {
+				return tokenizer.Token().Data, nil
+			}
+			return "Empty Page Title", nil
 		}
 	}
 }

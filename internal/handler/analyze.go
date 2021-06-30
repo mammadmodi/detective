@@ -46,7 +46,7 @@ func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	}
 	h.Logger.With(zap.Any("entered_url", u)).Info("entered url parsed successfully")
 
-	htmlString, err := h.performGetRequest(u)
+	htmlDoc, err := h.performGetRequest(u)
 	if err != nil {
 		h.Logger.With(zap.Error(err)).Error("error while performing request")
 		c.AbortWithStatusJSON(http.StatusPreconditionFailed, &Response{
@@ -57,7 +57,7 @@ func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	}
 	h.Logger.Info("request performed successfully")
 
-	res, err := htmlanalyzer.New(htmlString).Analyze()
+	res, err := htmlanalyzer.New(htmlDoc).Analyze()
 	if err != nil {
 		h.Logger.With(zap.Error(err)).Error("error while parsing html")
 		c.AbortWithStatusJSON(http.StatusPreconditionFailed, &Response{

@@ -1,11 +1,16 @@
 package htmlanalyzer
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"strings"
+	"sync"
+	"time"
 
+	"go.uber.org/zap"
 	"golang.org/x/net/html"
 )
 
@@ -36,25 +41,36 @@ type Result struct {
 // HTMLAnalyzer is a struct by which you can parse an html string
 // and retrieve useful information about that.
 type HTMLAnalyzer struct {
-	// Host is needed to check that the link is external or internal.
-	Host string
-
-	htmlDocument  string
+	m             sync.Mutex
+	httpClient    *http.Client
 	internalLinks []*url.URL
 	externalLinks []*url.URL
 	pointerLinks  []string
+
+	// HostURL is needed to check that the link is external or internal.
+	HostURL      *url.URL
+	Logger       *zap.Logger
+	HtmlDocument string
 }
 
 // New creates an HTMLAnalyzer object for the entered html string.
-func New(host, htmlDocument string) *HTMLAnalyzer {
+func New(hostURL *url.URL, htmlDocument string, httpTimeout time.Duration, logger *zap.Logger) *HTMLAnalyzer {
 	return &HTMLAnalyzer{
-		Host:         strings.ToLower(host),
-		htmlDocument: htmlDocument,
+		httpClient: &http.Client{
+			Timeout: httpTimeout,
+		},
+		internalLinks: []*url.URL{},
+		externalLinks: []*url.URL{},
+		pointerLinks:  []string{},
+
+		HostURL:      hostURL,
+		Logger:       logger,
+		HtmlDocument: htmlDocument,
 	}
 }
 
 // Analyze analyzes the html document and returns a Result object.
-func (h HTMLAnalyzer) Analyze() (Result, error) {
+func (h *HTMLAnalyzer) Analyze(ctx context.Context) (Result, error) {
 	// TODO handle errors.
 	htmlVersion, _ := h.getHTMLVersion()
 	pageTitle, _ := h.getPageTitle()
@@ -72,7 +88,7 @@ func (h HTMLAnalyzer) Analyze() (Result, error) {
 }
 
 func (h *HTMLAnalyzer) getHTMLVersion() (string, error) {
-	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
+	tokenizer := html.NewTokenizer(strings.NewReader(h.HtmlDocument))
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
@@ -111,7 +127,7 @@ func (h *HTMLAnalyzer) getHTMLVersion() (string, error) {
 }
 
 func (h *HTMLAnalyzer) getPageTitle() (string, error) {
-	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
+	tokenizer := html.NewTokenizer(strings.NewReader(h.HtmlDocument))
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
@@ -134,7 +150,7 @@ func (h *HTMLAnalyzer) getPageTitle() (string, error) {
 }
 
 func (h *HTMLAnalyzer) getHeadingsCount() (*HeadingsCount, error) {
-	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
+	tokenizer := html.NewTokenizer(strings.NewReader(h.HtmlDocument))
 	headings := &HeadingsCount{}
 	for {
 		tt := tokenizer.Next()
@@ -182,7 +198,7 @@ func (h *HTMLAnalyzer) parseAndSetLinks() error {
 	h.internalLinks = []*url.URL{}
 	h.externalLinks = []*url.URL{}
 	h.pointerLinks = []string{}
-	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
+	tokenizer := html.NewTokenizer(strings.NewReader(h.HtmlDocument))
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
@@ -199,22 +215,35 @@ func (h *HTMLAnalyzer) parseAndSetLinks() error {
 				if a.Key == "href" {
 					// Empty href.
 					if len(a.Val) == 0 {
+						h.Logger.With(zap.String("href", a.Val)).Debug("url ignored because it was empty")
 						continue
 					}
 					// Pointer links.
 					if string(a.Val[0]) == "#" {
+						h.Logger.With(zap.String("href", a.Val)).Debug("url ignored because it was a pointer")
 						h.pointerLinks = append(h.pointerLinks, a.Val)
 						continue
 					}
 
 					u, err := url.Parse(strings.TrimSpace(a.Val))
 					if err != nil {
+						h.Logger.With(zap.String("href", a.Val)).Debug("url ignored, could not parse url")
 						continue
 					}
+
+					if u.Scheme != "" && !strings.Contains(u.Scheme, "http") {
+						h.Logger.With(zap.String("href", a.Val), zap.String("scheme", u.Scheme)).
+							Debug("url ignored, bad scheme")
+						continue
+					}
+
 					if h.isInternalLink(u) {
+						u = u.ResolveReference(h.HostURL)
 						h.internalLinks = append(h.internalLinks, u)
+						h.Logger.With(zap.String("url", u.String())).Info("marked as internal")
 					} else {
 						h.externalLinks = append(h.externalLinks, u)
+						h.Logger.With(zap.String("url", u.String())).Info("marked as external")
 					}
 				}
 			}
@@ -223,11 +252,11 @@ func (h *HTMLAnalyzer) parseAndSetLinks() error {
 }
 
 func (h *HTMLAnalyzer) isInternalLink(u *url.URL) bool {
-	return u.Host == "" || strings.Contains(strings.ToLower(u.Host), h.Host)
+	return u.Host == "" || strings.Contains(strings.ToLower(u.Host), h.HostURL.Host)
 }
 
 func (h *HTMLAnalyzer) hasLoginForm() (bool, error) {
-	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
+	tokenizer := html.NewTokenizer(strings.NewReader(h.HtmlDocument))
 	// If the html has a form which has one of the following keywords in it's identity attributes
 	// we can be sure that page has login form.
 	loginFormKeywords := []string{"login", "signin", "sign_in"}

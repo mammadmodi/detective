@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"github.com/mammadmodi/detective/pkg/htmlanalyzer"
 	"io/ioutil"
@@ -46,7 +47,7 @@ func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	}
 	h.Logger.With(zap.Any("entered_url", u)).Info("entered url parsed successfully")
 
-	htmlDoc, err := h.performGetRequest(u)
+	htmlDoc, err := h.performGetRequest(c.Request.Context(), u)
 	if err != nil {
 		h.Logger.With(zap.Error(err)).Error("error while performing request")
 		c.AbortWithStatusJSON(http.StatusPreconditionFailed, &Response{
@@ -57,7 +58,9 @@ func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	}
 	h.Logger.Info("request performed successfully")
 
-	res, err := htmlanalyzer.New(u.Host, htmlDoc).Analyze()
+	res, err := htmlanalyzer.
+		New(u, htmlDoc, h.HTTPClient.Timeout, h.Logger.Named("html_analyzer")).
+		Analyze(c.Request.Context())
 	if err != nil {
 		h.Logger.With(zap.Error(err)).Error("error while parsing html")
 		c.AbortWithStatusJSON(http.StatusPreconditionFailed, &Response{
@@ -74,8 +77,13 @@ func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	})
 }
 
-func (h *HTTPHandler) performGetRequest(u *url.URL) (html string, err error) {
-	resp, err := h.HTTPClient.Get(u.String())
+func (h *HTTPHandler) performGetRequest(ctx context.Context, u *url.URL) (html string, err error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	if err != nil {
+		return "", errors.New("error while creating HTTP request")
+	}
+
+	resp, err := h.HTTPClient.Do(req)
 	if err != nil {
 		return "", errors.New("error while performing HTTP request")
 	}

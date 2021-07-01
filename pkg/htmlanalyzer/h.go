@@ -49,6 +49,7 @@ func (h HTMLAnalyzer) Analyze() (Result, error) {
 	pageTitle, _ := h.getPageTitle()
 	headingsCount, _ := h.getHeadingsCount()
 	intLinksCount, extLinksCount, _ := h.getLinksCount()
+	hasLoginForm, _ := h.hasLoginForm()
 	return Result{
 		HTMLVersion:       htmlVersion,
 		PageTitle:         pageTitle,
@@ -56,7 +57,7 @@ func (h HTMLAnalyzer) Analyze() (Result, error) {
 		InternalLinks:     uint(intLinksCount),
 		ExternalLinks:     uint(extLinksCount),
 		InaccessibleLinks: 0,
-		HasLoginForm:      false,
+		HasLoginForm:      hasLoginForm,
 	}, nil
 }
 
@@ -189,6 +190,49 @@ func (h *HTMLAnalyzer) parseAndSetLinks() error {
 						h.internalLinks = append(h.internalLinks, u)
 					} else {
 						h.externalLinks = append(h.externalLinks, u)
+					}
+				}
+			}
+		}
+	}
+}
+
+func (h *HTMLAnalyzer) hasLoginForm() (bool, error) {
+	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
+	// If the html has a form which has one of the following keywords in it's identity attributes
+	// we can be sure that page has login form.
+	loginFormKeywords := []string{"login", "signin", "sign_in"}
+	// If the html has password inputs only once we can say that it's a login form.
+	// If number of password inputs is more than 1 so it's a sign up page or a reset password.
+	var numOfPasswordInputs uint8
+	for {
+		tt := tokenizer.Next()
+		if tt == html.ErrorToken {
+			err := tokenizer.Err()
+			if err == io.EOF {
+				return numOfPasswordInputs == 1, nil
+			}
+			return false, fmt.Errorf("error while tokenizing HTML: %v", err)
+		}
+		t := tokenizer.Token()
+		if tt == html.StartTagToken {
+			if t.Data == "form" {
+				for _, a := range t.Attr {
+					if a.Key == "name" || a.Key == "id" || a.Key == "action" {
+						for _, k := range loginFormKeywords {
+							if strings.Contains(strings.ToLower(a.Val), k) {
+								return true, nil
+							}
+						}
+					}
+				}
+			}
+			if t.Data == "input" {
+				for _, a := range t.Attr {
+					if a.Key == "type" {
+						if strings.Contains(strings.ToLower(a.Val), "password") {
+							numOfPasswordInputs++
+						}
 					}
 				}
 			}

@@ -3,6 +3,7 @@ package htmlanalyzer
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -25,12 +26,18 @@ type Result struct {
 // HTMLAnalyzer is a struct by which you can parse an html string
 // and retrieve useful information about that.
 type HTMLAnalyzer struct {
-	htmlDocument string
+	// Host is needed to check that the link is external or internal.
+	Host string
+
+	htmlDocument  string
+	internalLinks []*url.URL
+	externalLinks []*url.URL
 }
 
 // New creates an HTMLAnalyzer object for the entered html string.
-func New(htmlDocument string) *HTMLAnalyzer {
+func New(host, htmlDocument string) *HTMLAnalyzer {
 	return &HTMLAnalyzer{
+		Host:         strings.ToLower(host),
 		htmlDocument: htmlDocument,
 	}
 }
@@ -41,12 +48,13 @@ func (h HTMLAnalyzer) Analyze() (Result, error) {
 	htmlVersion, _ := h.getHTMLVersion()
 	pageTitle, _ := h.getPageTitle()
 	headingsCount, _ := h.getHeadingsCount()
+	intLinksCount, extLinksCount, _ := h.getLinksCount()
 	return Result{
 		HTMLVersion:       htmlVersion,
 		PageTitle:         pageTitle,
 		HeadingsCount:     headingsCount,
-		InternalLinks:     0,
-		ExternalLinks:     0,
+		InternalLinks:     uint(intLinksCount),
+		ExternalLinks:     uint(extLinksCount),
 		InaccessibleLinks: 0,
 		HasLoginForm:      false,
 	}, nil
@@ -129,7 +137,6 @@ func (h *HTMLAnalyzer) getHeadingsCount() (Headings, error) {
 
 		td := tokenizer.Token().Data
 		if tt == html.StartTagToken && string(td[0]) == "h" {
-			println(td)
 			switch td {
 			case "h1":
 				headings.H1++
@@ -143,6 +150,47 @@ func (h *HTMLAnalyzer) getHeadingsCount() (Headings, error) {
 				headings.H5++
 			case "h6":
 				headings.H6++
+			}
+		}
+	}
+}
+
+func (h *HTMLAnalyzer) getLinksCount() (int, int, error) {
+	if err := h.parseAndSetLinks(); err != nil {
+		return 0, 0, err
+	}
+
+	return len(h.internalLinks), len(h.externalLinks), nil
+}
+
+func (h *HTMLAnalyzer) parseAndSetLinks() error {
+	h.internalLinks = []*url.URL{}
+	h.externalLinks = []*url.URL{}
+	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
+	for {
+		tt := tokenizer.Next()
+		if tt == html.ErrorToken {
+			err := tokenizer.Err()
+			if err == io.EOF {
+				return nil
+			}
+			return fmt.Errorf("error while tokenizing HTML: %v", err)
+		}
+
+		t := tokenizer.Token()
+		if tt == html.StartTagToken && t.Data == "a" {
+			for _, a := range t.Attr {
+				if a.Key == "href" {
+					u, err := url.Parse(strings.TrimSpace(a.Val))
+					if err != nil {
+						continue
+					}
+					if u.Host == "" || strings.Contains(strings.ToLower(u.Host), h.Host) {
+						h.internalLinks = append(h.internalLinks, u)
+					} else {
+						h.externalLinks = append(h.externalLinks, u)
+					}
+				}
 			}
 		}
 	}

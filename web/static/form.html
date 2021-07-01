@@ -31,7 +31,7 @@
         <div class="alert alert-success">
             <strong>Success!</strong>
             <br>
-            Result for <strong id="url_result"></strong>:
+            Result for <strong id="url_result"></strong>
         </div>
         <table class="table">
             <thead>
@@ -46,12 +46,47 @@
                 <td id="page_title"></td>
             </tr>
             <tr>
+                <th scope="row">Headings Count</th>
+                <td id="headings_count">
+                    <table class="table">
+                        <tr>
+                            <th scope="row">H1</th>
+                            <td id="headings_count_h1"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">H2</th>
+                            <td id="headings_count_h2"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">H3</th>
+                            <td id="headings_count_h3"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">H4</th>
+                            <td id="headings_count_h4"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">H5</th>
+                            <td id="headings_count_h5"></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">H6</th>
+                            <td id="headings_count_h6"></td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
                 <th scope="row">External Links</th>
                 <td id="external_links"></td>
             </tr>
             <tr>
                 <th scope="row">Internal Links</th>
                 <td id="internal_links"></td>
+            </tr>
+            <tr>
+                <th scope="row">Pointer Links</th>
+                <td id="pointer_links"></td>
             </tr>
             <tr>
                 <th scope="row">Inaccessible Links</th>
@@ -80,8 +115,15 @@
                     $('#url_result').html(url)
                     $('#html_version').html(data.result.html_version)
                     $('#page_title').html(data.result.page_title)
-                    $('#external_links').html(data.result.external_links)
-                    $('#internal_links').html(data.result.internal_links)
+                    $('#headings_count_h1').html(data.result.headings_count.h1)
+                    $('#headings_count_h2').html(data.result.headings_count.h2)
+                    $('#headings_count_h3').html(data.result.headings_count.h3)
+                    $('#headings_count_h4').html(data.result.headings_count.h4)
+                    $('#headings_count_h5').html(data.result.headings_count.h5)
+                    $('#headings_count_h6').html(data.result.headings_count.h6)
+                    $('#external_links').html(data.result.links_count.external)
+                    $('#internal_links').html(data.result.links_count.internal)
+                    $('#pointer_links').html(data.result.links_count.pointer)
                     $('#inaccessible_links').html(data.result.inaccessible_links)
                     $('#has_login').html(data.result.has_login_form)
                     $('#success_box').show();

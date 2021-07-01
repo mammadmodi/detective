@@ -9,18 +9,28 @@ import (
 	"golang.org/x/net/html"
 )
 
-type Headings struct {
-	H1, H2, H3, H4, H5, H6 uint
+type HeadingsCount struct {
+	H1 int `json:"h1"`
+	H2 int `json:"h2"`
+	H3 int `json:"h3"`
+	H4 int `json:"h4"`
+	H5 int `json:"h5"`
+	H6 int `json:"h6"`
+}
+
+type LinksCount struct {
+	Internal int `json:"internal"`
+	External int `json:"external"`
+	Pointer  int `json:"pointer"`
 }
 
 type Result struct {
-	HTMLVersion       string   `json:"html_version"`
-	PageTitle         string   `json:"page_title"`
-	HeadingsCount     Headings `json:"headings"`
-	InternalLinks     uint     `json:"internal_links"`
-	ExternalLinks     uint     `json:"external_links"`
-	InaccessibleLinks uint     `json:"inaccessible_links"`
-	HasLoginForm      bool     `json:"has_login_form"`
+	HTMLVersion            string         `json:"html_version"`
+	PageTitle              string         `json:"page_title"`
+	HeadingsCount          *HeadingsCount `json:"headings_count"`
+	LinksCount             *LinksCount    `json:"links_count"`
+	InaccessibleLinksCount int            `json:"inaccessible_links_count"`
+	HasLoginForm           bool           `json:"has_login_form"`
 }
 
 // HTMLAnalyzer is a struct by which you can parse an html string
@@ -32,6 +42,7 @@ type HTMLAnalyzer struct {
 	htmlDocument  string
 	internalLinks []*url.URL
 	externalLinks []*url.URL
+	pointerLinks  []string
 }
 
 // New creates an HTMLAnalyzer object for the entered html string.
@@ -48,16 +59,15 @@ func (h HTMLAnalyzer) Analyze() (Result, error) {
 	htmlVersion, _ := h.getHTMLVersion()
 	pageTitle, _ := h.getPageTitle()
 	headingsCount, _ := h.getHeadingsCount()
-	intLinksCount, extLinksCount, _ := h.getLinksCount()
+	linksCount, _ := h.getLinksCount()
 	hasLoginForm, _ := h.hasLoginForm()
 	return Result{
-		HTMLVersion:       htmlVersion,
-		PageTitle:         pageTitle,
-		HeadingsCount:     headingsCount,
-		InternalLinks:     uint(intLinksCount),
-		ExternalLinks:     uint(extLinksCount),
-		InaccessibleLinks: 0,
-		HasLoginForm:      hasLoginForm,
+		HTMLVersion:            htmlVersion,
+		PageTitle:              pageTitle,
+		HeadingsCount:          headingsCount,
+		LinksCount:             linksCount,
+		InaccessibleLinksCount: 0,
+		HasLoginForm:           hasLoginForm,
 	}, nil
 }
 
@@ -123,9 +133,9 @@ func (h *HTMLAnalyzer) getPageTitle() (string, error) {
 	}
 }
 
-func (h *HTMLAnalyzer) getHeadingsCount() (Headings, error) {
+func (h *HTMLAnalyzer) getHeadingsCount() (*HeadingsCount, error) {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
-	headings := Headings{}
+	headings := &HeadingsCount{}
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
@@ -156,17 +166,22 @@ func (h *HTMLAnalyzer) getHeadingsCount() (Headings, error) {
 	}
 }
 
-func (h *HTMLAnalyzer) getLinksCount() (int, int, error) {
+func (h *HTMLAnalyzer) getLinksCount() (*LinksCount, error) {
 	if err := h.parseAndSetLinks(); err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 
-	return len(h.internalLinks), len(h.externalLinks), nil
+	return &LinksCount{
+		Internal: len(h.internalLinks),
+		External: len(h.externalLinks),
+		Pointer:  len(h.pointerLinks),
+	}, nil
 }
 
 func (h *HTMLAnalyzer) parseAndSetLinks() error {
 	h.internalLinks = []*url.URL{}
 	h.externalLinks = []*url.URL{}
+	h.pointerLinks = []string{}
 	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDocument))
 	for {
 		tt := tokenizer.Next()
@@ -182,11 +197,21 @@ func (h *HTMLAnalyzer) parseAndSetLinks() error {
 		if tt == html.StartTagToken && t.Data == "a" {
 			for _, a := range t.Attr {
 				if a.Key == "href" {
+					// Empty href.
+					if len(a.Val) == 0 {
+						continue
+					}
+					// Pointer links.
+					if string(a.Val[0]) == "#" {
+						h.pointerLinks = append(h.pointerLinks, a.Val)
+						continue
+					}
+
 					u, err := url.Parse(strings.TrimSpace(a.Val))
 					if err != nil {
 						continue
 					}
-					if u.Host == "" || strings.Contains(strings.ToLower(u.Host), h.Host) {
+					if h.isInternalLink(u) {
 						h.internalLinks = append(h.internalLinks, u)
 					} else {
 						h.externalLinks = append(h.externalLinks, u)
@@ -195,6 +220,10 @@ func (h *HTMLAnalyzer) parseAndSetLinks() error {
 			}
 		}
 	}
+}
+
+func (h *HTMLAnalyzer) isInternalLink(u *url.URL) bool {
+	return u.Host == "" || strings.Contains(strings.ToLower(u.Host), h.Host)
 }
 
 func (h *HTMLAnalyzer) hasLoginForm() (bool, error) {

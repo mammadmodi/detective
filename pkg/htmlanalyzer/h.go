@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -76,13 +77,14 @@ func (h *HTMLAnalyzer) Analyze(ctx context.Context) (Result, error) {
 	pageTitle, _ := h.getPageTitle()
 	headingsCount, _ := h.getHeadingsCount()
 	linksCount, _ := h.getLinksCount()
+	inaccessibleLinksCount, _ := h.getInaccessibleLinksCount(ctx)
 	hasLoginForm, _ := h.hasLoginForm()
 	return Result{
 		HTMLVersion:            htmlVersion,
 		PageTitle:              pageTitle,
 		HeadingsCount:          headingsCount,
 		LinksCount:             linksCount,
-		InaccessibleLinksCount: 0,
+		InaccessibleLinksCount: inaccessibleLinksCount,
 		HasLoginForm:           hasLoginForm,
 	}, nil
 }
@@ -253,6 +255,77 @@ func (h *HTMLAnalyzer) parseAndSetLinks() error {
 
 func (h *HTMLAnalyzer) isInternalLink(u *url.URL) bool {
 	return u.Host == "" || strings.Contains(strings.ToLower(u.Host), h.HostURL.Host)
+}
+
+func (h *HTMLAnalyzer) getInaccessibleLinksCount(ctx context.Context) (int, error) {
+	links := h.getNonPointerLinks()
+
+	var inaccessibleLinksCount int
+	inc := func() {
+		h.m.Lock()
+		inaccessibleLinksCount++
+		h.m.Unlock()
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(links))
+	for _, u := range links {
+		u := u
+		go func() {
+			defer wg.Done()
+			if !h.isAccessibleURL(ctx, u) {
+				h.Logger.With(zap.String("url", u.String())).Debug("url is not accessible")
+				inc()
+				return
+			}
+			h.Logger.With(zap.String("url", u.String())).Debug("url is accessible")
+		}()
+	}
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		h.Logger.Debug("all go routines finished successfully")
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-done:
+		return inaccessibleLinksCount, nil
+	case <-ctx.Done():
+		return inaccessibleLinksCount, fmt.Errorf("process stopped due to context got done")
+	}
+}
+
+func (h *HTMLAnalyzer) getNonPointerLinks() []*url.URL {
+	var nonPointerLinks []*url.URL
+	nonPointerLinks = append(nonPointerLinks, h.externalLinks...)
+	nonPointerLinks = append(nonPointerLinks, h.internalLinks...)
+	return nonPointerLinks
+}
+
+func (h *HTMLAnalyzer) isAccessibleURL(ctx context.Context, u *url.URL) bool {
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	if err != nil {
+		h.Logger.Error("could not create request")
+		return false
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		h.Logger.Error("could not perform request")
+		return false
+	}
+
+	_, err = io.Copy(ioutil.Discard, resp.Body)
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode == http.StatusOK {
+		return true
+	}
+
+	h.Logger.Error("response code is not 200")
+	return false
 }
 
 func (h *HTMLAnalyzer) hasLoginForm() (bool, error) {

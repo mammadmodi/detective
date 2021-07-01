@@ -2,6 +2,7 @@ package htmlanalyzer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -71,35 +72,43 @@ func New(hostURL *url.URL, htmlDocument string, httpTimeout time.Duration, logge
 }
 
 // Analyze analyzes the html document and returns a Result object.
-func (h *HTMLAnalyzer) Analyze(ctx context.Context) (Result, error) {
-	// TODO handle errors.
-	htmlVersion, _ := h.getHTMLVersion()
-	pageTitle, _ := h.getPageTitle()
-	headingsCount, _ := h.getHeadingsCount()
-	linksCount, _ := h.getLinksCount()
-	inaccessibleLinksCount, _ := h.getInaccessibleLinksCount(ctx)
-	hasLoginForm, _ := h.hasLoginForm()
-	return Result{
-		HTMLVersion:            htmlVersion,
-		PageTitle:              pageTitle,
-		HeadingsCount:          headingsCount,
-		LinksCount:             linksCount,
-		InaccessibleLinksCount: inaccessibleLinksCount,
-		HasLoginForm:           hasLoginForm,
+func (h *HTMLAnalyzer) Analyze(ctx context.Context) (*Result, error) {
+	if err := h.validateHTMLDoc(); err != nil {
+		return nil, errors.New("html doctype is not valid")
+	}
+
+	return &Result{
+		HTMLVersion:            h.getHTMLVersion(),
+		PageTitle:              h.getPageTitle(),
+		HeadingsCount:          h.getHeadingsCount(),
+		LinksCount:             h.getLinksCount(),
+		InaccessibleLinksCount: h.getInaccessibleLinksCount(ctx),
+		HasLoginForm:           h.hasLoginForm(),
 	}, nil
 }
 
-func (h *HTMLAnalyzer) getHTMLVersion() (string, error) {
+func (h *HTMLAnalyzer) validateHTMLDoc() error {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.HtmlDocument))
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
 			err := tokenizer.Err()
 			if err == io.EOF {
-				return "Unknown HTML Version", nil
+				return nil
 			}
-			return "Unknown HTML Version", fmt.Errorf("error while tokenizing HTML: %v", err)
+			return fmt.Errorf("error while tokenizing HTML: %v", err)
 		}
+	}
+}
+
+func (h *HTMLAnalyzer) getHTMLVersion() string {
+	tokenizer := html.NewTokenizer(strings.NewReader(h.HtmlDocument))
+	for {
+		tt := tokenizer.Next()
+		if tt == html.ErrorToken {
+			return "Unknown HTML Version"
+		}
+
 		if tt == html.DoctypeToken {
 			type docType struct {
 				version, matcher string
@@ -120,48 +129,40 @@ func (h *HTMLAnalyzer) getHTMLVersion() (string, error) {
 			for _, d := range docTypes {
 				ok := strings.Contains(strings.ToUpper(v), d.matcher)
 				if ok {
-					return d.version, nil
+					return d.version
 				}
 			}
-			return "unknown", nil
+			return "unknown"
 		}
 	}
 }
 
-func (h *HTMLAnalyzer) getPageTitle() (string, error) {
+func (h *HTMLAnalyzer) getPageTitle() string {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.HtmlDocument))
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
-			err := tokenizer.Err()
-			if err == io.EOF {
-				return "Unknown Page Title", nil
-			}
-			return "Unknown Page Title", fmt.Errorf("error while tokenizing HTML: %v", err)
+			return "Unknown Page Title"
 		}
 
 		td := tokenizer.Token().Data
 		if tt == html.StartTagToken && td == "title" {
 			tt = tokenizer.Next()
 			if tt == html.TextToken {
-				return tokenizer.Token().Data, nil
+				return tokenizer.Token().Data
 			}
-			return "Empty Page Title", nil
+			return "Empty Page Title"
 		}
 	}
 }
 
-func (h *HTMLAnalyzer) getHeadingsCount() (*HeadingsCount, error) {
+func (h *HTMLAnalyzer) getHeadingsCount() *HeadingsCount {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.HtmlDocument))
 	headings := &HeadingsCount{}
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
-			err := tokenizer.Err()
-			if err == io.EOF {
-				return headings, nil
-			}
-			return headings, fmt.Errorf("error while tokenizing HTML: %v", err)
+			return headings
 		}
 
 		td := tokenizer.Token().Data
@@ -184,19 +185,16 @@ func (h *HTMLAnalyzer) getHeadingsCount() (*HeadingsCount, error) {
 	}
 }
 
-func (h *HTMLAnalyzer) getLinksCount() (*LinksCount, error) {
-	if err := h.parseAndSetLinks(); err != nil {
-		return nil, err
-	}
-
+func (h *HTMLAnalyzer) getLinksCount() *LinksCount {
+	h.parseAndSetLinks()
 	return &LinksCount{
 		Internal: len(h.internalLinks),
 		External: len(h.externalLinks),
 		Pointer:  len(h.pointerLinks),
-	}, nil
+	}
 }
 
-func (h *HTMLAnalyzer) parseAndSetLinks() error {
+func (h *HTMLAnalyzer) parseAndSetLinks() {
 	h.internalLinks = []*url.URL{}
 	h.externalLinks = []*url.URL{}
 	h.pointerLinks = []string{}
@@ -204,11 +202,7 @@ func (h *HTMLAnalyzer) parseAndSetLinks() error {
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
-			err := tokenizer.Err()
-			if err == io.EOF {
-				return nil
-			}
-			return fmt.Errorf("error while tokenizing HTML: %v", err)
+			return
 		}
 
 		t := tokenizer.Token()
@@ -257,7 +251,7 @@ func (h *HTMLAnalyzer) isInternalLink(u *url.URL) bool {
 	return u.Host == "" || strings.Contains(strings.ToLower(u.Host), h.HostURL.Host)
 }
 
-func (h *HTMLAnalyzer) getInaccessibleLinksCount(ctx context.Context) (int, error) {
+func (h *HTMLAnalyzer) getInaccessibleLinksCount(ctx context.Context) int {
 	links := h.getNonPointerLinks()
 
 	var inaccessibleLinksCount int
@@ -291,9 +285,10 @@ func (h *HTMLAnalyzer) getInaccessibleLinksCount(ctx context.Context) (int, erro
 
 	select {
 	case <-done:
-		return inaccessibleLinksCount, nil
+		return inaccessibleLinksCount
 	case <-ctx.Done():
-		return inaccessibleLinksCount, fmt.Errorf("process stopped due to context got done")
+		h.Logger.Error("process stopped due to context got done")
+		return inaccessibleLinksCount
 	}
 }
 
@@ -328,7 +323,7 @@ func (h *HTMLAnalyzer) isAccessibleURL(ctx context.Context, u *url.URL) bool {
 	return false
 }
 
-func (h *HTMLAnalyzer) hasLoginForm() (bool, error) {
+func (h *HTMLAnalyzer) hasLoginForm() bool {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.HtmlDocument))
 	// If the html has a form which has one of the following keywords in it's identity attributes
 	// we can be sure that page has login form.
@@ -339,11 +334,7 @@ func (h *HTMLAnalyzer) hasLoginForm() (bool, error) {
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
-			err := tokenizer.Err()
-			if err == io.EOF {
-				return numOfPasswordInputs == 1, nil
-			}
-			return false, fmt.Errorf("error while tokenizing HTML: %v", err)
+			return numOfPasswordInputs == 1
 		}
 		t := tokenizer.Token()
 		if tt == html.StartTagToken {
@@ -352,7 +343,7 @@ func (h *HTMLAnalyzer) hasLoginForm() (bool, error) {
 					if a.Key == "name" || a.Key == "id" || a.Key == "action" {
 						for _, k := range loginFormKeywords {
 							if strings.Contains(strings.ToLower(a.Val), k) {
-								return true, nil
+								return true
 							}
 						}
 					}

@@ -18,9 +18,9 @@ type URLRequest struct {
 }
 
 type Response struct {
-	Result htmlanalyzer.Result `json:"result"`
-	Error  string              `json:"error"`
-	Code   int                 `json:"code"`
+	Result *htmlanalyzer.Result `json:"result"`
+	Error  string               `json:"error"`
+	Code   int                  `json:"code"`
 }
 
 // AnalyzeURL gets an url in request and analyzes the content of the html returned by url.

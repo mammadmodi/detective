@@ -12,6 +12,11 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
+
+# Binaries of application
+detective-server
+detective
+server
 
 .idea

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
 	"time"
@@ -15,19 +16,23 @@ import (
 var c *config.AppConfig
 var l *zap.Logger
 var hc *http.Client
+var h *handler.HTTPHandler
 
 func init() {
 	var err error
+	// Initialize application configuration.
 	c, err = config.NewAppConfig()
 	if err != nil {
 		panic(err)
 	}
 
+	// Initialize application logger.
 	l, err = logger.NewZapLogger("detective", c.LoggerConfig)
 	if err != nil {
 		panic(err)
 	}
 
+	// Initialize application HTTP client.
 	hc = &http.Client{
 		Timeout: c.HTTPTimeout,
 		Transport: &http.Transport{
@@ -35,24 +40,30 @@ func init() {
 		},
 	}
 
-	l.With(zap.Any("configs", c)).Info("application initialized successfully")
-}
+	h = &handler.HTTPHandler{
+		HTTPClient:      hc,
+		Logger:          l.Named("http_handler"),
+		HTMLAnalyzeFunc: htmlanalysis.Analyze,
+	}
 
-func main() {
 	// Setup package level dependencies.
 	hcClone := *hc
 	htmlanalysis.SetGlobalLogger(l.Named("html_analyzer"))
 	htmlanalysis.SetGlobalHTTPClient(&hcClone)
 
+	l.With(zap.Any("configs", c)).Info("application initialized successfully")
+}
+
+func main() {
 	// Create http server.
-	h := handler.New(l.Named("http_handler"), hc, htmlanalysis.Analyze)
-	server := &http.Server{
-		Addr:    c.Addr,
-		Handler: h.GetRouter(),
-	}
+	r := gin.New()
+	r.GET("/analyze-url", func(c *gin.Context) {
+		http.ServeFile(c.Writer, c.Request, "./web/static/form.html")
+	})
+	r.POST("/analyze-url", h.AnalyzeURL)
 
 	// Launch server and listen to application port.
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := http.ListenAndServe(c.Addr, r); err != nil && err != http.ErrServerClosed {
 		l.With(zap.Error(err)).Panic("error while running gin http server")
 	}
 

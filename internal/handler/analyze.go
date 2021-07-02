@@ -3,27 +3,29 @@ package handler
 import (
 	"context"
 	"errors"
-	"github.com/mammadmodi/detective/pkg/htmlanalyzer"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mammadmodi/detective/pkg/htmlanalysis"
 	"go.uber.org/zap"
 )
 
+// URLRequest is a struct which entry requests bind to it.
 type URLRequest struct {
 	URL string `json:"url"`
 }
 
+// Response is a struct which is returned to user on the analyze request.
 type Response struct {
-	Result *htmlanalyzer.Result `json:"result"`
+	Result *htmlanalysis.Result `json:"result"`
 	Error  string               `json:"error"`
 	Code   int                  `json:"code"`
 }
 
-// AnalyzeURL gets an url in request and analyzes the content of the html returned by url.
+// AnalyzeURL gets an URLRequest and analyzes the content of the html returned by url.
 func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	req := URLRequest{}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -58,7 +60,7 @@ func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	}
 	h.Logger.Info("request performed successfully")
 
-	res, err := htmlanalyzer.Analyze(c.Request.Context(), u, htmlDoc)
+	res, err := htmlanalysis.Analyze(c.Request.Context(), u, htmlDoc)
 	if err != nil {
 		h.Logger.With(zap.Error(err)).Error("error while parsing html")
 		c.AbortWithStatusJSON(http.StatusPreconditionFailed, &Response{
@@ -75,6 +77,7 @@ func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	})
 }
 
+// performGetRequest performs a GET request to url returns a html string if it has.
 func (h *HTTPHandler) performGetRequest(ctx context.Context, u *url.URL) (html string, err error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {

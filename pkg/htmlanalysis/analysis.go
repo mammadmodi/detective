@@ -1,4 +1,4 @@
-package htmlanalyzer
+package htmlanalysis
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/html"
 )
 
+// HeadingsCount is a type which holds headings count by their level.
 type HeadingsCount struct {
 	H1 int `json:"h1"`
 	H2 int `json:"h2"`
@@ -25,11 +26,19 @@ type HeadingsCount struct {
 	H6 int `json:"h6"`
 }
 
+// LinksCount is a struct which holds links count based on their region.
 type LinksCount struct {
 	Internal int `json:"internal"`
 	External int `json:"external"`
 }
 
+// Result is a report of analysis on a html document.
+// HTMLVersion is version of HTML which is mentioned in doctype tag.
+// PageTitle is title of page in the title tag.
+// HeadingsCount is count of headings by their level.
+// InaccessibleLinksCount is count of links that doesn't return a 2xx status code
+// on a GET request.
+// HasLoginForm shows that whether the html doc contains a login form or not.
 type Result struct {
 	HTMLVersion            string         `json:"html_version"`
 	PageTitle              string         `json:"page_title"`
@@ -41,27 +50,35 @@ type Result struct {
 
 var globalLogger = zap.NewNop()
 
+// SetGlobalLogger sets a logger for this package.
 func SetGlobalLogger(logger *zap.Logger) {
 	globalLogger = logger
 }
 
 var globalHTTPClient = &http.Client{
 	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		// We should reduce the IdleConnTimeout because the requests that are being performed
+		// by this HTTPClient target different hosts and there is no meaning to have idle connection
+		// for a long time.
+		IdleConnTimeout: 5 * time.Second,
+	},
 }
 
+// SetGlobalHTTPClient sets an HTTPClient for this package which is used for analysis purposes.
 func SetGlobalHTTPClient(client *http.Client) {
 	globalHTTPClient = client
 }
 
-// Analyze is a global wrapper function on HTMLAnalyzer.Analyze.
+// Analyze is a global wrapper function on htmlAnalyzer.Analyze.
 func Analyze(ctx context.Context, hostURL *url.URL, htmlDocument string) (*Result, error) {
-	h := NewHTMLAnalyzer(htmlDocument, hostURL)
-	return h.Analyze(ctx)
+	h := newHTMLAnalyzer(htmlDocument, hostURL)
+	return h.analyze(ctx)
 }
 
-// NewHTMLAnalyzer creates a new HTMLAnalyzer object.
-func NewHTMLAnalyzer(htmlDoc string, hostURL *url.URL) *HTMLAnalyzer {
-	return &HTMLAnalyzer{
+// newHTMLAnalyzer creates a new htmlAnalyzer object.
+func newHTMLAnalyzer(htmlDoc string, hostURL *url.URL) *htmlAnalyzer {
+	return &htmlAnalyzer{
 		htmlDoc:       htmlDoc,
 		hostURL:       hostURL,
 		internalLinks: []*url.URL{},
@@ -69,9 +86,8 @@ func NewHTMLAnalyzer(htmlDoc string, hostURL *url.URL) *HTMLAnalyzer {
 	}
 }
 
-// HTMLAnalyzer is a struct by which you can Parse an html string
-// and retrieve a Result object.
-type HTMLAnalyzer struct {
+// htmlAnalyzer is a struct which holds the states of result during the analysis.
+type htmlAnalyzer struct {
 	htmlDoc       string
 	hostURL       *url.URL
 	result        *Result
@@ -79,27 +95,30 @@ type HTMLAnalyzer struct {
 	externalLinks []*url.URL
 }
 
-func (h *HTMLAnalyzer) Analyze(ctx context.Context) (*Result, error) {
+// analyze starts analysis on htmlAnalyzer.htmlDoc field.
+func (h *htmlAnalyzer) analyze(ctx context.Context) (*Result, error) {
 	if h.result != nil {
 		return h.result, nil
 	}
 
-	if err := h.Validate(); err != nil {
+	if err := h.validate(); err != nil {
 		return nil, errors.New("html document is not valid")
 	}
+
 	h.result = &Result{}
 	h.
-		ParseAndSetHTMLVersion().
-		ParseAndSetPageTitle().
-		ParseAndSetHeadingsCount().
-		ParseAndSetLinksCount().
-		SetInaccessibleLinksCount(ctx).
-		ParseAndSetHasLoginForm()
+		parseAndSetHTMLVersion().
+		parseAndSetPageTitle().
+		parseAndSetHeadingsCount().
+		parseAndSetLinksCount().
+		setInaccessibleLinksCount(ctx).
+		parseAndSetHasLoginForm()
 
 	return h.result, nil
 }
 
-func (h *HTMLAnalyzer) Validate() error {
+// validate loops on all of html tags and checks any problems in that.
+func (h *htmlAnalyzer) validate() error {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDoc))
 	for {
 		tt := tokenizer.Next()
@@ -113,7 +132,8 @@ func (h *HTMLAnalyzer) Validate() error {
 	}
 }
 
-func (h *HTMLAnalyzer) ParseAndSetHTMLVersion() *HTMLAnalyzer {
+// parseAndSetHTMLVersion parses html document and sets the version in result field.
+func (h *htmlAnalyzer) parseAndSetHTMLVersion() *htmlAnalyzer {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDoc))
 	version := "Unknown HTML Version"
 
@@ -153,7 +173,8 @@ func (h *HTMLAnalyzer) ParseAndSetHTMLVersion() *HTMLAnalyzer {
 	return h
 }
 
-func (h *HTMLAnalyzer) ParseAndSetPageTitle() *HTMLAnalyzer {
+// parseAndSetPageTitle parses html document and sets the page title in result field.
+func (h *htmlAnalyzer) parseAndSetPageTitle() *htmlAnalyzer {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDoc))
 	pageTitle := "Empty Page Title"
 	for {
@@ -175,7 +196,8 @@ func (h *HTMLAnalyzer) ParseAndSetPageTitle() *HTMLAnalyzer {
 	return h
 }
 
-func (h *HTMLAnalyzer) ParseAndSetHeadingsCount() *HTMLAnalyzer {
+// parseAndSetHeadingsCount parses html doc and sets headings based on their levels to result field.
+func (h *htmlAnalyzer) parseAndSetHeadingsCount() *htmlAnalyzer {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDoc))
 	headings := &HeadingsCount{}
 	for {
@@ -206,8 +228,10 @@ func (h *HTMLAnalyzer) ParseAndSetHeadingsCount() *HTMLAnalyzer {
 	return h
 }
 
-func (h *HTMLAnalyzer) ParseAndSetLinksCount() *HTMLAnalyzer {
-	h.ParseAndSetLinks()
+// parseAndSetLinksCount first sets all the available links in the state of htmlAnalyzer
+// and then sets the LinksCount field to result.
+func (h *htmlAnalyzer) parseAndSetLinksCount() *htmlAnalyzer {
+	h.parseAndSetLinks()
 	h.result.LinksCount = &LinksCount{
 		Internal: len(h.internalLinks),
 		External: len(h.externalLinks),
@@ -215,7 +239,10 @@ func (h *HTMLAnalyzer) ParseAndSetLinksCount() *HTMLAnalyzer {
 	return h
 }
 
-func (h *HTMLAnalyzer) ParseAndSetLinks() {
+// parseAndSetLinks parses the html document and stores all the internal and external links
+// to htmlAnalyzer.internalLinks and htmlAnalyzer.externalLinks.
+// we store this links because we need them for finding inaccessible links count.
+func (h *htmlAnalyzer) parseAndSetLinks() {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDoc))
 	for {
 		tt := tokenizer.Next()
@@ -264,11 +291,13 @@ func (h *HTMLAnalyzer) ParseAndSetLinks() {
 	}
 }
 
-func (h *HTMLAnalyzer) isInternalLink(url *url.URL) bool {
+func (h *htmlAnalyzer) isInternalLink(url *url.URL) bool {
 	return url.Host == "" || strings.Contains(strings.ToLower(url.Host), h.hostURL.Host)
 }
 
-func (h *HTMLAnalyzer) SetInaccessibleLinksCount(ctx context.Context) *HTMLAnalyzer {
+// setInaccessibleLinksCount loops on all of links and counts the links that doesn't return
+// an acceptable 2xx status code.
+func (h *htmlAnalyzer) setInaccessibleLinksCount(ctx context.Context) *htmlAnalyzer {
 	var m sync.Mutex
 	var inaccessibleLinksCount int
 	inc := func() {
@@ -302,6 +331,7 @@ func (h *HTMLAnalyzer) SetInaccessibleLinksCount(ctx context.Context) *HTMLAnaly
 
 	select {
 	case <-done:
+		// here we have finished process of inaccessible links before ending of context.
 	case <-ctx.Done():
 		globalLogger.Error("process stopped due to context got done")
 	}
@@ -309,7 +339,8 @@ func (h *HTMLAnalyzer) SetInaccessibleLinksCount(ctx context.Context) *HTMLAnaly
 	return h
 }
 
-func (h *HTMLAnalyzer) isAccessibleURL(ctx context.Context, u *url.URL) bool {
+// isAccessibleURL checks the accessibility of a link.
+func (h *htmlAnalyzer) isAccessibleURL(ctx context.Context, u *url.URL) bool {
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
 		globalLogger.Error("could not create request")
@@ -325,7 +356,7 @@ func (h *HTMLAnalyzer) isAccessibleURL(ctx context.Context, u *url.URL) bool {
 	_, err = io.Copy(ioutil.Discard, resp.Body)
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
 		return true
 	}
 
@@ -333,7 +364,8 @@ func (h *HTMLAnalyzer) isAccessibleURL(ctx context.Context, u *url.URL) bool {
 	return false
 }
 
-func (h *HTMLAnalyzer) ParseAndSetHasLoginForm() *HTMLAnalyzer {
+// parseAndSetHasLoginForm parses the document and sets a flag in result field.
+func (h *htmlAnalyzer) parseAndSetHasLoginForm() *htmlAnalyzer {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDoc))
 	hasLoginForm := false
 	// If the html has a form which has one of the following keywords in it's identity attributes

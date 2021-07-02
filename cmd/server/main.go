@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/mammadmodi/detective/internal/config"
-	"github.com/mammadmodi/detective/internal/handler"
-	"github.com/mammadmodi/detective/pkg/htmlanalyzer"
-	"github.com/mammadmodi/detective/pkg/logger"
-	"go.uber.org/zap"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/mammadmodi/detective/internal/config"
+	"github.com/mammadmodi/detective/internal/handler"
+	"github.com/mammadmodi/detective/pkg/htmlanalysis"
+	"github.com/mammadmodi/detective/pkg/logger"
+	"go.uber.org/zap"
 )
 
 var c *config.AppConfig
@@ -28,6 +30,9 @@ func init() {
 
 	hc = &http.Client{
 		Timeout: c.HTTPTimeout,
+		Transport: &http.Transport{
+			IdleConnTimeout: 5 * time.Second,
+		},
 	}
 
 	l.With(zap.Any("configs", c)).Info("application initialized successfully")
@@ -36,8 +41,8 @@ func init() {
 func main() {
 	// Setup package level dependencies.
 	hcClone := *hc
-	htmlanalyzer.SetGlobalLogger(l.Named("html_analyzer"))
-	htmlanalyzer.SetGlobalHTTPClient(&hcClone)
+	htmlanalysis.SetGlobalLogger(l.Named("html_analyzer"))
+	htmlanalysis.SetGlobalHTTPClient(&hcClone)
 
 	// Create http server.
 	h := handler.New(l.Named("http_handler"), hc)

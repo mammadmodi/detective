@@ -1,0 +1,16 @@
+version: '3.7'
+services:
+  detective:
+    container_name: detective
+    image: detective:main
+    ports:
+      - 8000:8000
+    environment:
+      DETECTIVE_LOGGER_ENABLED: "true"
+      DETECTIVE_LOGGER_LEVEL: "info"
+      DETECTIVE_LOGGER_PRETTY: "true"
+      DETECTIVE_LOGGER_FILE_REDIRECT_ENABLED: "false"
+      DETECTIVE_LOGGER_FILE_REDIRECT_PATH: "/var/log"
+      DETECTIVE_LOGGER_FILE_REDIRECT_PREFIX: "detective"
+      DETECTIVE_ADDR: "0.0.0.0:8000"
+      DETECTIVE_HTTP_TIMEOUT: "30s"

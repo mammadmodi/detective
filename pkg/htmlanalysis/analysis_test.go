@@ -29,7 +29,7 @@ func TestNewHTMLAnalyzer(t *testing.T) {
 	ha := NewHTMLAnalyzer(htmlDoc, hostURL)
 	assert.Equal(t, htmlDoc, ha.htmlDoc)
 	assert.Equal(t, hostURL, ha.hostURL)
-	assert.NotNil(t, ha.internalLinks, ha.externalLinks, ha.result)
+	assert.NotNil(t, ha.internalLinks, ha.externalLinks)
 	assert.False(t, ha.linksAreParsed)
 }
 

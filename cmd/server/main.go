@@ -56,7 +56,7 @@ func init() {
 	htmlanalysis.SetGlobalHTTPClient(&hcClone)
 
 	// Create application router.
-	r := gin.New()
+	r = gin.New()
 	r.GET("/analyze-url", func(c *gin.Context) {
 		http.ServeFile(c.Writer, c.Request, "./web/static/form.html")
 	})

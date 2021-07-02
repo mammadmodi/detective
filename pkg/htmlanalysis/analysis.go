@@ -72,8 +72,7 @@ func SetGlobalHTTPClient(client *http.Client) {
 
 // Analyze is a global wrapper function on HTMLAnalyzer.Analyze method.
 func Analyze(ctx context.Context, hostURL *url.URL, htmlDocument string) (*Result, error) {
-	h := NewHTMLAnalyzer(htmlDocument, hostURL)
-	return h.Analyze(ctx)
+	return NewHTMLAnalyzer(htmlDocument, hostURL).Analyze(ctx)
 }
 
 // NewHTMLAnalyzer creates a new HTMLAnalyzer object.
@@ -83,7 +82,6 @@ func NewHTMLAnalyzer(htmlDoc string, hostURL *url.URL) *HTMLAnalyzer {
 		hostURL:       hostURL,
 		internalLinks: []*url.URL{},
 		externalLinks: []*url.URL{},
-		result:        &Result{},
 	}
 }
 
@@ -114,6 +112,7 @@ func (h *HTMLAnalyzer) Analyze(ctx context.Context) (*Result, error) {
 	r.LinksCount = h.GetLinksCount()
 	r.InaccessibleLinksCount = h.GetInaccessibleLinksCount(ctx)
 	r.HasLoginForm = h.HasLoginForm()
+	h.result = r
 
 	return h.result, nil
 }

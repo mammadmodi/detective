@@ -17,6 +17,7 @@ var c *config.AppConfig
 var l *zap.Logger
 var hc *http.Client
 var h *handler.HTTPHandler
+var r *gin.Engine
 
 func init() {
 	var err error
@@ -33,12 +34,12 @@ func init() {
 	}
 
 	// Initialize application HTTP client.
+	// We should reduce the IdleConnTimeout because the requests that are being performed
+	// by this HTTPClient target different hosts and there is no meaning to have an idle connection
+	// for a long time.
 	hc = &http.Client{
 		Timeout: c.HTTPTimeout,
 		Transport: &http.Transport{
-			// We should reduce the IdleConnTimeout because the requests that are being performed
-			// by this HTTPClient target different hosts and there is no meaning to have an idle connection
-			// for a long time.
 			IdleConnTimeout: 5 * time.Second,
 		},
 	}
@@ -54,17 +55,17 @@ func init() {
 	htmlanalysis.SetGlobalLogger(l.Named("html_analyzer"))
 	htmlanalysis.SetGlobalHTTPClient(&hcClone)
 
-	l.With(zap.Any("configs", c)).Info("application initialized successfully")
-}
-
-func main() {
-	// Create http server.
+	// Create application router.
 	r := gin.New()
 	r.GET("/analyze-url", func(c *gin.Context) {
 		http.ServeFile(c.Writer, c.Request, "./web/static/form.html")
 	})
 	r.POST("/analyze-url", h.AnalyzeURL)
 
+	l.With(zap.Any("configs", c)).Info("application initialized successfully")
+}
+
+func main() {
 	// Launch server and listen to application port.
 	if err := http.ListenAndServe(c.Addr, r); err != nil && err != http.ErrServerClosed {
 		l.With(zap.Error(err)).Panic("error while running gin http server")

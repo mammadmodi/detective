@@ -55,12 +55,12 @@ func SetGlobalLogger(logger *zap.Logger) {
 	globalLogger = logger
 }
 
+// We should reduce the IdleConnTimeout because the requests that are being performed
+// by this HTTPClient target different hosts and there is no meaning to have idle connection
+// for a long time.
 var globalHTTPClient = &http.Client{
 	Timeout: 30 * time.Second,
 	Transport: &http.Transport{
-		// We should reduce the IdleConnTimeout because the requests that are being performed
-		// by this HTTPClient target different hosts and there is no meaning to have idle connection
-		// for a long time.
 		IdleConnTimeout: 5 * time.Second,
 	},
 }
@@ -136,12 +136,11 @@ func (h *HTMLAnalyzer) validate() error {
 // GetHTMLVersion parses html document and returns the version.
 func (h *HTMLAnalyzer) GetHTMLVersion() string {
 	tokenizer := html.NewTokenizer(strings.NewReader(h.htmlDoc))
-	version := "Unknown HTML Version"
-
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
-			break
+			globalLogger.Warn("html version didn't find")
+			return "Unknown HTML Version"
 		}
 
 		if tt == html.DoctypeToken {
@@ -164,13 +163,11 @@ func (h *HTMLAnalyzer) GetHTMLVersion() string {
 			for _, d := range docTypes {
 				ok := strings.Contains(strings.ToUpper(v), d.matcher)
 				if ok {
-					version = d.version
-					break
+					return d.version
 				}
 			}
 		}
 	}
-	return version
 }
 
 // GetPageTitle parses html document and returns the page title.
@@ -180,6 +177,7 @@ func (h *HTMLAnalyzer) GetPageTitle() string {
 	for {
 		tt := tokenizer.Next()
 		if tt == html.ErrorToken {
+			globalLogger.Warn("could not find page title")
 			break
 		}
 
@@ -187,8 +185,14 @@ func (h *HTMLAnalyzer) GetPageTitle() string {
 		if tt == html.StartTagToken && td == "title" {
 			tt = tokenizer.Next()
 			if tt == html.TextToken {
-				pageTitle = tokenizer.Token().Data
+				data := tokenizer.Token().Data
+				if data != "" {
+					pageTitle = data
+					break
+				}
+				globalLogger.Warn("page title is empty")
 			}
+			globalLogger.Warn("page title is empty")
 			break
 		}
 	}
@@ -230,6 +234,7 @@ func (h *HTMLAnalyzer) GetHeadingsCount() *HeadingsCount {
 // and then returns the LinksCount.
 func (h *HTMLAnalyzer) GetLinksCount() *LinksCount {
 	if !h.linksAreParsed {
+		globalLogger.Info("parsing links in html document")
 		h.parseAndSetLinks()
 	}
 	return &LinksCount{

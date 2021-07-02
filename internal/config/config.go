@@ -17,14 +17,14 @@ type AppConfig struct {
 
 // NewAppConfig creates an AppConfig object based on the environment variables of the OS.
 func NewAppConfig() (*AppConfig, error) {
-	// Try to load env variables to AppConfig struct
+	// Try to load env variables to AppConfig struct.
 	c := &AppConfig{}
 	err := envconfig.Process("detective", c)
 	if err != nil {
 		return nil, fmt.Errorf("error while processing env variables for root configs, error: %s", err.Error())
 	}
 
-	// Try to load env variables to logger.Config struct
+	// Try to load env variables to logger.Config struct.
 	loggerConfig := &logger.Config{}
 	if err := envconfig.Process("detective_logger", loggerConfig); err != nil {
 		return nil, fmt.Errorf("error while processing env variables for logger configs, error: %s", err.Error())

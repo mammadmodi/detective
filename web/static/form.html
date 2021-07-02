@@ -85,10 +85,6 @@
                 <td id="internal_links"></td>
             </tr>
             <tr>
-                <th scope="row">Pointer Links</th>
-                <td id="pointer_links"></td>
-            </tr>
-            <tr>
                 <th scope="row">Inaccessible Links</th>
                 <td id="inaccessible_links"></td>
             </tr>
@@ -123,7 +119,6 @@
                     $('#headings_count_h6').html(data.result.headings_count.h6)
                     $('#external_links').html(data.result.links_count.external)
                     $('#internal_links').html(data.result.links_count.internal)
-                    $('#pointer_links').html(data.result.links_count.pointer)
                     $('#inaccessible_links').html(data.result.inaccessible_links_count)
                     $('#has_login').html(data.result.has_login_form)
                     $('#success_box').show();

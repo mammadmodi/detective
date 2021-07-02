@@ -30,7 +30,7 @@ func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	req := URLRequest{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.Logger.With(zap.Error(err)).Error("error while binding request body")
-		c.AbortWithStatusJSON(http.StatusBadRequest, &Response{
+		c.AbortWithStatusJSON(http.StatusNotAcceptable, &Response{
 			Error: "cannot parse request body",
 			Code:  http.StatusNotAcceptable,
 		})
@@ -60,7 +60,7 @@ func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	}
 	h.Logger.Info("request performed successfully")
 
-	res, err := htmlanalysis.Analyze(c.Request.Context(), u, htmlDoc)
+	res, err := h.HTMLAnalyzeFunc(c.Request.Context(), u, htmlDoc)
 	if err != nil {
 		h.Logger.With(zap.Error(err)).Error("error while parsing html")
 		c.AbortWithStatusJSON(http.StatusPreconditionFailed, &Response{

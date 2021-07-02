@@ -45,7 +45,7 @@ func main() {
 	htmlanalysis.SetGlobalHTTPClient(&hcClone)
 
 	// Create http server.
-	h := handler.New(l.Named("http_handler"), hc)
+	h := handler.New(l.Named("http_handler"), hc, htmlanalysis.Analyze)
 	server := &http.Server{
 		Addr:    c.Addr,
 		Handler: h.GetRouter(),

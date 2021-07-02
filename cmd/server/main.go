@@ -36,6 +36,9 @@ func init() {
 	hc = &http.Client{
 		Timeout: c.HTTPTimeout,
 		Transport: &http.Transport{
+			// We should reduce the IdleConnTimeout because the requests that are being performed
+			// by this HTTPClient target different hosts and there is no meaning to have an idle connection
+			// for a long time.
 			IdleConnTimeout: 5 * time.Second,
 		},
 	}

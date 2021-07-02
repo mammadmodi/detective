@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/mammadmodi/detective/internal/config"
 	"github.com/mammadmodi/detective/internal/handler"
+	"github.com/mammadmodi/detective/pkg/htmlanalyzer"
 	"github.com/mammadmodi/detective/pkg/logger"
 	"go.uber.org/zap"
 	"net/http"
@@ -33,8 +34,13 @@ func init() {
 }
 
 func main() {
+	// Setup package level dependencies.
+	hcClone := *hc
+	htmlanalyzer.SetGlobalLogger(l.Named("html_analyzer"))
+	htmlanalyzer.SetGlobalHTTPClient(&hcClone)
+
 	// Create http server.
-	h := handler.New(l, hc)
+	h := handler.New(l.Named("http_handler"), hc)
 	server := &http.Server{
 		Addr:    c.Addr,
 		Handler: h.GetRouter(),

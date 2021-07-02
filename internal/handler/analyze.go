@@ -58,9 +58,7 @@ func (h *HTTPHandler) AnalyzeURL(c *gin.Context) {
 	}
 	h.Logger.Info("request performed successfully")
 
-	res, err := htmlanalyzer.
-		New(u, htmlDoc, h.HTTPClient.Timeout, h.Logger.Named("html_analyzer")).
-		Analyze(c.Request.Context())
+	res, err := htmlanalyzer.Analyze(c.Request.Context(), u, htmlDoc)
 	if err != nil {
 		h.Logger.With(zap.Error(err)).Error("error while parsing html")
 		c.AbortWithStatusJSON(http.StatusPreconditionFailed, &Response{

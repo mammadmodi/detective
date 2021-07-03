@@ -11,7 +11,7 @@ COPY . .
 
 WORKDIR /app/cmd/server
 
-RUN go build -o /server
+RUN go build -o /detective-server
 
 FROM alpine:latest
 
@@ -21,8 +21,8 @@ WORKDIR /app/
 COPY --from=builder /app/web ./web
 
 # Copy app binary file.
-COPY --from=builder /server .
+COPY --from=builder /detective-server .
 
 EXPOSE 8000
 
-ENTRYPOINT ["./server"]
+ENTRYPOINT ["./detective-server"]

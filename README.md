@@ -29,6 +29,15 @@ request to entry url and then retrieves the following information:
 5. Count of inaccessible links
 6. Existence of Login Form
 
+---
+**NOTE**
+
+It's a sample golang application, so I tried to make its folders and package structured. You can find the full
+declaration of this folder structure at [this repo](https://github.com/golang-standards/project-layout). It's not
+recommended using this folder structure for small projects.
+
+---
+
 ## How to set up?
 
 Easily you can use `make up` command to set up detective application. First it will build the docker image of

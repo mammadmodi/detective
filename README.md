@@ -3,6 +3,7 @@
 [![Workflow Status](https://github.com/mammadmodi/detective/workflows/Test/badge.svg)](https://github.com/mammadmodi/detective/actions)
 [![codecov](https://codecov.io/gh/mammadmodi/detective/branch/main/graph/badge.svg)](https://codecov.io/gh/mammadmodi/detective)
 [![GitHub go.mod Go version of a Go module](https://img.shields.io/github/go-mod/go-version/mammadmodi/detective?filename=go.mod)](https://github.com/mammadmodi/detective)
+[![Docker Image Size (tag)](https://img.shields.io/docker/image-size/mammadmodi/detective/main?style=flat-square&logo=docker)](https://github.com/mammadmodi/detective/blob/main/build/Dockerfile)
 
 The web application for analyzing web pages written with golang.
 

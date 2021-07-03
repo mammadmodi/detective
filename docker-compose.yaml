@@ -2,7 +2,7 @@ version: '3.7'
 services:
   detective:
     container_name: detective
-    image: detective:main
+    image: mammadmodi/detective:main
     ports:
       - 8000:8000
     environment:

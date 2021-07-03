@@ -14,7 +14,7 @@ compile: dependencies
 build-image:
 	docker build -f ./build/Dockerfile -t ${IMAGE_TAG} .
 
-up: down build-image
+up: down
 	docker-compose up -d
 
 down:

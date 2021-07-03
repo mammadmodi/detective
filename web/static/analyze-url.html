@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Welcome to Detective!</title>
+    <meta name="description" content="A basic form">
+    <meta name="author" content="Ludwig Stumpp">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="js/app.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container-fluid col-md-6 col-md-offset-3">
+    <form class="form-group" id="my-form" onsubmit="return false">
+        <div>
+            <label for="url">Please Enter URL</label>
+            <input type="text" class="form-control" id="url" name="url" required>
+            <br>
+            <button class="submit-button form-control btn btn-info" type="submit" value="Submit">Submit</button>
+            <div id="lock-modal"></div>
+            <div class="modal-content" id="loading-circle"></div>
+        </div>
+    </form>
+    <div class="container alert" id="alert">
+        <strong id="alert_message"></strong>
+    </div>
+</div>
+
+<div class="container col-md-8 col-md-offset-2 " style="margin-bottom: auto">
+    <div class="row">
+        <div id="result_table" style="display: none;" class="table-responsive col-md-12 ">
+            <table class="table table-secondary table-striped">
+                <thead>
+                <tr>
+                    <th scope="col">HTML Version</th>
+                    <td><strong id="html-version"></strong></td>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <th scope="row">Page Title</th>
+                    <td><strong id="page-title"></strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">External Links</th>
+                    <td><strong id="external-links"></strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">Internal Links</th>
+                    <td><strong id="internal-links"></strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">Inaccessible Links</th>
+                    <td><strong id="inaccessible-links"></strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">Has Login Form</th>
+                    <td><strong id="has-login"></strong></td>
+
+                <tr>
+                    <th scope="row">H1 Headings Count</th>
+                    <td><strong id="headings-count-h1"></strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">H2 Headings Count</th>
+                    <td><strong id="headings-count-h2"></strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">H3 Headings Count</th>
+                    <td><strong id="headings-count-h3"></strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">H4 Headings Count</th>
+                    <td><strong id="headings-count-h4"></strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">H5 Headings Count</th>
+                    <td><strong id="headings-count-h5"></strong></td>
+                </tr>
+                <tr>
+                    <th scope="row">H6 Headings Count</th>
+                    <td><strong id="headings-count-h6"></strong></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

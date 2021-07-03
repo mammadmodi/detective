@@ -57,9 +57,7 @@ func init() {
 
 	// Create application router.
 	r = gin.New()
-	r.GET("/analyze-url", func(c *gin.Context) {
-		http.ServeFile(c.Writer, c.Request, "./web/static/form.html")
-	})
+	r.Static("/", "./web/static/")
 	r.POST("/analyze-url", h.AnalyzeURL)
 
 	l.With(zap.Any("configs", c)).Info("application initialized successfully")

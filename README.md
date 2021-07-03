@@ -43,4 +43,4 @@ recommended using this folder structure for small projects.
 
 Easily you can use `make up` command to set up detective application. First it will build the docker image of
 application, and then it runs an instance of that in background using docker compose. The application will be start on
-port 8000 by default, and you can use [it's form](http://127.0.0.1:8000/analyze-url) to analyze your web pages.
+port 8000 by default, and you can use its [Form](http://127.0.0.1:8000/analyze-url.html) to analyze your web pages.

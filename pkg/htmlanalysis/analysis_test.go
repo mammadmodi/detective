@@ -18,7 +18,7 @@ func TestSetGlobalHTTPClient(t *testing.T) {
 }
 
 func TestSetGlobalLogger(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
+	logger := zap.NewNop()
 	SetGlobalLogger(logger)
 	assert.Equal(t, logger, globalLogger)
 }

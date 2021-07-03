@@ -2,7 +2,10 @@ version: '3.7'
 services:
   detective:
     container_name: detective
-    image: mammadmodi/detective:main
+    build:
+      context: .
+      dockerfile: build/Dockerfile
+    image: detective:main
     ports:
       - 8000:8000
     environment:

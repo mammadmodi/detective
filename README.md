@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/gh/mammadmodi/detective/branch/main/graph/badge.svg)](https://codecov.io/gh/mammadmodi/detective)
 [![GitHub go.mod Go version of a Go module](https://img.shields.io/github/go-mod/go-version/mammadmodi/detective?filename=go.mod)](https://github.com/mammadmodi/detective)
 [![Docker Image Size (tag)](https://img.shields.io/docker/image-size/mammadmodi/detective/main?style=flat-square&logo=docker)](https://github.com/mammadmodi/detective/blob/main/build/Dockerfile)
+[![Docker Pulls](https://img.shields.io/docker/pulls/mammadmodi/detective?style=flat-square&logo=docker)](https://hub.docker.com/r/mammadmodi/detective/tags?page=1&ordering=last_updated)
 
 The web application for analyzing web pages written with golang.
 
@@ -41,6 +42,27 @@ recommended using this folder structure for small projects.
 
 ## How to set up?
 
-Easily you can use `make up` command to set up detective application. First it will build the docker image of
-application, and then it runs an instance of that in background using docker compose. The application will be start on
-port 8000 by default, and you can use its [Form](http://127.0.0.1:8000/analyze-url.html) to analyze your web pages.
+### Docker
+
+Use `docker run --rm -p 8000:8000 mammadmodi/detective:main` command to create a container in the foreground.Just be
+aware that the `mammadmodi/detective:main` docker image has been built only for **linux/amd64** Arch so if you use
+another architecture then try to use one of the following ways.
+
+### Docker Compose
+
+Clone the project in your local and run the app easily by `make up` command in your desktop to set up detective
+application. It first builds a docker image in your local and then runs an instance of that in the background using
+**docker compose**.
+
+Don't forget to run `make down` when you finished your work with this app.
+
+### Go Compiler
+
+[Install Go](https://golang.org/doc/install) in your local and use the bellow command to set up application server:
+
+`go run ./cmd/server/main.go`
+
+## How To Use?
+
+Anyway, when you set up the application, it will be started on port 8000 by default, and you can use
+its [Form](http://127.0.0.1:8000/analyze-url.html) to analyze your web pages.

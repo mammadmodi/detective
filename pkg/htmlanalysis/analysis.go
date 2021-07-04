@@ -350,13 +350,13 @@ func (h *HTMLAnalyzer) GetInaccessibleLinksCount(ctx context.Context) int {
 func (h *HTMLAnalyzer) isAccessibleURL(ctx context.Context, u *url.URL) bool {
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
-		globalLogger.Error("could not create request")
+		globalLogger.With(zap.String("url", u.String())).Error("could not create request")
 		return false
 	}
 
 	resp, err := globalHTTPClient.Do(req)
 	if err != nil {
-		globalLogger.Error("could not perform request")
+		globalLogger.With(zap.String("url", u.String())).Error("could not perform request")
 		return false
 	}
 
@@ -367,7 +367,7 @@ func (h *HTMLAnalyzer) isAccessibleURL(ctx context.Context, u *url.URL) bool {
 		return true
 	}
 
-	globalLogger.Error("response code is not 200")
+	globalLogger.With(zap.String("url", u.String())).Error("response code is not 2xx")
 	return false
 }
 

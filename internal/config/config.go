@@ -12,7 +12,7 @@ import (
 type AppConfig struct {
 	LoggerConfig *logger.Config
 	Addr         string        `default:":8000"`
-	HTTPTimeout  time.Duration `split_words:"true" default:"10s"`
+	HTTPTimeout  time.Duration `split_words:"true" default:"30s"`
 }
 
 // NewAppConfig creates an AppConfig object based on the environment variables of the OS.

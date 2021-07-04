@@ -39,6 +39,10 @@ func TestHTMLAnalyzer_GetHTMLVersion(t *testing.T) {
 		htmlDoc         string
 	}{
 		{
+			expectedVersion: "Unknown HTML Version",
+			htmlDoc:         `<!invalid doctype>`,
+		},
+		{
 			expectedVersion: "HTML 5",
 			htmlDoc:         `<!DOCTYPE HTML>`,
 		},
@@ -227,6 +231,7 @@ func generateTestHTMLWithRealLinks() (
 	}{
 		{name: "empty link", href: "", internal: true, valid: false, accessible: true},
 		{name: "pointer link", href: "#top", internal: true, valid: false, accessible: true},
+		{name: "bad scheme url", href: "javascript:void(0)", internal: true, valid: false, accessible: false},
 		{name: "internal relative link", href: "contact-us", internal: true, valid: true, accessible: true},
 		{name: "internal relative link", href: "login.php", internal: true, valid: true, accessible: true},
 		{name: "internal link", href: availableIntServerURL.String(), internal: true, valid: true, accessible: true},

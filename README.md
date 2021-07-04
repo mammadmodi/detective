@@ -66,3 +66,19 @@ Don't forget to run `make down` when you finished your work with this app.
 
 Anyway, when you set up the application, it will be started on port 8000 by default, and you can use
 its [Form](http://127.0.0.1:8000/analyze-url.html) to analyze your web pages.
+
+### App Configuration
+
+You can configure the application by setting environment variables on your os. The list of available configurations has
+shown below:
+
+| **Variable Name**              | **Type** | **Default** |                **Description**                  |
+| ------------------------------ | -------- | ----------- | ----------------------------------------------- |
+| `DETECTIVE_ADDR`        | ***string***  | ":8000" | The address of http server with its port |
+| `DETECTIVE_HTTP_TIMEOUT` | ***string*** | "30s" | Timeout for performing http requests |
+| `DETECTIVE_LOGGER_ENABLED` | ***boolean*** | true | Feature flag for logger|
+| `DETECTIVE_LOGGER_LEVEL` | ***string*** | "info" | Level of logger in string format(debug,info,warn,...)|
+| `DETECTIVE_LOGGER_PRETTY` | ***boolean*** | true | If set to false logs will be structured in json objects|
+| `DETECTIVE_LOGGER_FILE_REDIRECT_ENABLED`  | ***false***  | false | Feature flag for storing logs to files|
+| `DETECTIVE_LOGGER_FILE_REDIRECT_PATH` | ***string***  | "/var/log" | Directory of log file storage|
+| `DETECTIVE_LOGGER_FILE_REDIRECT_PREFIX` | ***string*** | "detective" | Prefix for log files |

@@ -46,7 +46,6 @@ function ajax() {
             $('#result_table').show()
             stopWaitingModal()
         },
-
         error: function (xhr, status, error) {
             $('#result_box').show()
             let alert = $('#alert')
@@ -81,5 +80,4 @@ $(document).ready(function () {
         ajax()
         setTimeout(stopWaitingModal, 30000);
     });
-
 });

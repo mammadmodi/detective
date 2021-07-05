@@ -19,7 +19,7 @@ The web application for analyzing web pages written with golang.
 (______/ (_______/   )_(   (_______/(_______/   )_(   \_______/   \_/   (_______/
 ~~~
 
-## What is detective?
+## What is Detective?
 
 Detective is a web application by which you can get useful information about an url. First it will perform an GET
 request to entry url and then retrieves the following information:
@@ -35,8 +35,8 @@ request to entry url and then retrieves the following information:
 **NOTE**
 
 It's a sample golang application, so I tried to make its folders and package structured. You can find the full
-declaration of this folder structure at [this repo](https://github.com/golang-standards/project-layout). It's not
-recommended using this folder structure for small projects.
+declaration of standard Golang folder structure at [this link](https://github.com/golang-standards/project-layout). It's
+not recommended using this folder structure for small projects.
 
 ---
 
@@ -44,9 +44,10 @@ recommended using this folder structure for small projects.
 
 ### Docker
 
-Use `docker run --rm -p 8000:8000 mammadmodi/detective:main` command to create a container in the foreground.Just be
-aware that the `mammadmodi/detective:main` docker image has been built only for **linux/amd64** Arch so if you use
-another architecture then try to use one of the following ways.
+Use `docker run --rm -p 8000:8000 mammadmodi/detective:main` command to create a container in the foreground.
+
+Just be aware that the `mammadmodi/detective:main` docker image has been built only for **linux/amd64** Arch so if you
+use another architecture then try to use one of the following ways.
 
 ### Docker Compose
 
@@ -54,7 +55,7 @@ Clone the project in your local and run the app easily by `make up` command in y
 application. It first builds a docker image in your local and then runs an instance of that in the background using
 **docker compose**.
 
-Don't forget to run `make down` when you finished your work with this app.
+When you finished your work with this app you can stop the application by using `make down` command.
 
 ### Go Compiler
 

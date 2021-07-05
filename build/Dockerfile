@@ -25,4 +25,11 @@ COPY --from=builder /detective-server .
 
 EXPOSE 8000
 
+RUN addgroup -g 1001 appuser && \
+    adduser -S -u 1001 -G appuser appuser
+
+RUN chown -R appuser:appuser /var/log/
+
+USER appuser
+
 ENTRYPOINT ["./detective-server"]
